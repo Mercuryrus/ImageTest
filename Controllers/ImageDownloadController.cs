@@ -87,24 +87,24 @@ namespace ImageTest.Controllers
                 long size = 0;
                 string savePath = Path.Combine(imageDir, nameList[i]);
                 ImageResponseModel imgResponse = new ImageResponseModel();
-                //if (urlList[i].Contains("https://") || urlList[i].Contains("http://") || urlList[i].Contains("www."))
                 try
                 {
-                    using (WebClient localClient = new WebClient())
+                    if (urlList[i].Contains("https://") || urlList[i].Contains("http://") || urlList[i].Contains("www.") || urlList[i].Contains("//"))
                     {
-                        localClient.DownloadFile(urlList[i], savePath);
-                        FileInfo file = new FileInfo(savePath);
-                        size = file.Length;
-                        imgResponse.Size = file.Length.ToString();
-                        imgResponse.Src = baseUrl + urlList[i];
-                        imgResponse.Alt = altList[i];
+
+                        using (WebClient localClient = new WebClient())
+                        {
+                            localClient.DownloadFile(urlList[i], savePath);
+                            FileInfo file = new FileInfo(savePath);
+                            size = file.Length;
+                            imgResponse.Size = file.Length.ToString();
+                            imgResponse.Src = baseUrl + urlList[i];
+                            imgResponse.Alt = altList[i];
+                        }
                     }
-                }
-                //else
-                catch
-                {
-                    try
+                    else
                     {
+
                         using (WebClient localClient = new WebClient())
                         {
                             localClient.DownloadFile(baseUrl + urlList[i], savePath);
@@ -114,10 +114,11 @@ namespace ImageTest.Controllers
                             imgResponse.Src = baseUrl + urlList[i];
                             imgResponse.Alt = altList[i];
                         }
+
                     }
-                    catch { Console.WriteLine("Ошибка хоста"); }
                 }
-                
+                catch { Console.WriteLine("Ошибка хоста"); }
+
 
                 response.Images.Add(imgResponse);
                 Console.WriteLine($"{nameList[i]} загружен\n Размер: {size} байт"); 
