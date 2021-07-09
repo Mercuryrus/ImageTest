@@ -9,28 +9,37 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using ImageTest.ResponseModels;
 using ImageTest.RequestModels;
+using ImageTest.Logger;
+using System.Threading.Tasks;
 
 namespace ImageTest.Controllers
 {
+    
     [ApiController]
     [Route("[controller]")]
     public class ImageDownloadController : ControllerBase
     {
-        private readonly ILogger<ImageDownloadController> _logger;
-
+        private readonly ILogger _logger;
         public ImageDownloadController(ILogger<ImageDownloadController> logger)
         {
             _logger = logger;
         }
-
+        
         [HttpPost]
         [Route("DownloadFiles")]
         public List<ResponseModel> DownloadFiles()
         {
+            LoggerWriter loggerWriter = new LoggerWriter();
             ConsoleApp consoleApp = new ConsoleApp();
-            ResponseModel response = new ResponseModel();
             ImageRequest image = consoleApp.EnterSource();
+            ResponseModel response = new ResponseModel();
             List<FileResponseModel>fileResponse = new List<FileResponseModel>();
+            ThreadPool.SetMaxThreads(image.ThrCount, image.ThrCount);
+
+            int workerThreds;
+            int completionPortThreads;
+            ThreadPool.GetAvailableThreads(out workerThreds, out completionPortThreads);
+            Console.WriteLine($"available threads = {workerThreds} / {completionPortThreads}");
             string directory = "images";
             if (!Directory.Exists(directory))
             {
@@ -38,27 +47,36 @@ namespace ImageTest.Controllers
             }
             WebClient client = new WebClient();
 
-            string data;
-            using (Stream stream = client.OpenRead(image.Url))
+            string data= "";
+            try
             {
-                using (StreamReader reader = new StreamReader(stream))
+                using (Stream stream = client.OpenRead(image.Url))
                 {
-                    data = reader.ReadToEnd();
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        data = reader.ReadToEnd();
+                    }
                 }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex.Message.ToString());
+                loggerWriter.WriteLog(ex.Message.ToString());
+                Console.WriteLine("Ошибка хоста");
             }
 
             string baseUrl = image.Url.GetLeftPart(UriPartial.Authority);
             Regex imgRegex = new Regex(@"\<img.+?src=\""(?<imgsrc>.+?)\"".+?\>", RegexOptions.ExplicitCapture);
             MatchCollection matches = imgRegex.Matches(data);
             Regex fileRegex = new Regex(@"[^\s\/]\.(jpg|png|gif|bmp)\z", RegexOptions.Compiled);
-
+                
             var imgs = imgRegex.Matches(data)
                                    .Select(m => m.Groups["imgsrc"].Value.Trim())
                                    .Select(url => new { url, name = url.Split(new[] { '/' }).Last() })
                                    .Where(a => fileRegex.IsMatch(a.name))
                                    .Distinct()
                                    .AsParallel()
-                                   .WithDegreeOfParallelism(image.ThreadCount)
+                                   .WithDegreeOfParallelism(1)
                                    .ToList();
 
             Regex altRegex = new Regex(@"\<img.+?alt=\""(?<imgalt>.+?)\"".+?\>", RegexOptions.ExplicitCapture);
@@ -70,10 +88,10 @@ namespace ImageTest.Controllers
             
             int count = 0;
             
-            if (image.ImageCount >= imgs.Count)
+            if (image.ImgCount >= imgs.Count)
             { count = imgs.Count; }
             else 
-            { count = image.ImageCount; }
+            { count = image.ImgCount; }
 
             string imageDir = directory + "/" + image.Url.Host;
             if (!Directory.Exists(imageDir))
@@ -89,12 +107,15 @@ namespace ImageTest.Controllers
                 ImageResponseModel imgResponse = new ImageResponseModel();
                 try
                 {
-                    if (urlList[i].Contains("https://") || urlList[i].Contains("http://") || urlList[i].Contains("www.") || urlList[i].Contains("//"))
+                    if (urlList[i].Contains("https://") || urlList[i].Contains("http://") || urlList[i].Contains("www.") || urlList[i].Contains("\\"))
                     {
 
                         using (WebClient localClient = new WebClient())
                         {
-                            localClient.DownloadFile(urlList[i], savePath);
+                            localClient.DownloadFileTaskAsync(urlList[i], savePath);
+                            int w, c;
+                            ThreadPool.GetAvailableThreads(out w, out c);
+                            Console.WriteLine($"{w} {c}");
                             FileInfo file = new FileInfo(savePath);
                             size = file.Length;
                             imgResponse.Size = file.Length.ToString();
@@ -107,7 +128,7 @@ namespace ImageTest.Controllers
 
                         using (WebClient localClient = new WebClient())
                         {
-                            localClient.DownloadFile(baseUrl + urlList[i], savePath);
+                            localClient.DownloadFileTaskAsync(baseUrl + urlList[i], savePath);
                             FileInfo file = new FileInfo(imageDir);
                             size = file.Length;
                             imgResponse.Size = file.Length.ToString();
@@ -116,12 +137,14 @@ namespace ImageTest.Controllers
                         }
 
                     }
+                    response.Images.Add(imgResponse);
+                    Console.WriteLine($"{nameList[i]} загружен\n Размер: {size} байт");
                 }
-                catch { Console.WriteLine("Ошибка хоста"); }
-
-
-                response.Images.Add(imgResponse);
-                Console.WriteLine($"{nameList[i]} загружен\n Размер: {size} байт"); 
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.Message.ToString());
+                    loggerWriter.WriteLog(ex.Message.ToString());
+                }
             }
             Console.WriteLine("Загрузка завершена!");
             return new List<ResponseModel>() { response };
