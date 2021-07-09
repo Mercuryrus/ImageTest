@@ -1,7 +1,5 @@
 ﻿using System;
 using ImageTest.RequestModels;
-using ImageTest.Controllers;
-using Microsoft.Extensions.Logging;
 using ImageTest.Logger;
 
 namespace ImageTest
@@ -27,7 +25,7 @@ namespace ImageTest
             }
             catch(Exception ex)
             {
-                loggerWriter.WriteLog(ex.Message.ToString());
+                loggerWriter.WriteLog(ex.Message.ToString(), ex.StackTrace.ToString());
                 Console.WriteLine("Неверный ввод");
                 image.Url = null;
                 image.ThrCount = 1;

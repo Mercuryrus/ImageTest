@@ -8,19 +8,19 @@ namespace ImageTest.Logger
 {
     public class LoggerWriter
     {
-        public void WriteLog(string logMessage)
+        public void WriteLog(string logMessage, string logData)
         {
             using (StreamWriter writeLog = File.AppendText("logger/log.txt"))
             {
-                Log(logMessage, writeLog);
+                Log(logMessage, logData, writeLog);
             }
         }
-        public void Log(string logMessage, TextWriter writeLog)
+        public void Log(string logMessage, string logData, TextWriter writeLog)
         {
             writeLog.Write("---------------------------------------------------------------------");
             writeLog.Write("\r\nLog Entry : ");
             writeLog.WriteLine($"{DateTime.Now.ToLongDateString()} {DateTime.Now.ToLongTimeString()} ");
-            writeLog.WriteLine($"{logMessage}");
+            writeLog.WriteLine($"{logMessage} \n{logData}");
             writeLog.WriteLine("---------------------------------------------------------------------");
         }
     }

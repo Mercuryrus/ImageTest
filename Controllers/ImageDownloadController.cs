@@ -36,10 +36,6 @@ namespace ImageTest.Controllers
             List<FileResponseModel>fileResponse = new List<FileResponseModel>();
             ThreadPool.SetMaxThreads(image.ThrCount, image.ThrCount);
 
-            int workerThreds;
-            int completionPortThreads;
-            ThreadPool.GetAvailableThreads(out workerThreds, out completionPortThreads);
-            Console.WriteLine($"available threads = {workerThreds} / {completionPortThreads}");
             string directory = "images";
             if (!Directory.Exists(directory))
             {
@@ -61,7 +57,7 @@ namespace ImageTest.Controllers
             catch(Exception ex)
             {
                 _logger.LogError(ex.Message.ToString());
-                loggerWriter.WriteLog(ex.Message.ToString());
+                loggerWriter.WriteLog(ex.Message.ToString(), ex.StackTrace.ToString());
                 Console.WriteLine("Ошибка хоста");
             }
 
@@ -76,7 +72,7 @@ namespace ImageTest.Controllers
                                    .Where(a => fileRegex.IsMatch(a.name))
                                    .Distinct()
                                    .AsParallel()
-                                   .WithDegreeOfParallelism(1)
+                                   .WithDegreeOfParallelism(4)
                                    .ToList();
 
             Regex altRegex = new Regex(@"\<img.+?alt=\""(?<imgalt>.+?)\"".+?\>", RegexOptions.ExplicitCapture);
@@ -113,9 +109,6 @@ namespace ImageTest.Controllers
                         using (WebClient localClient = new WebClient())
                         {
                             localClient.DownloadFileTaskAsync(urlList[i], savePath);
-                            int w, c;
-                            ThreadPool.GetAvailableThreads(out w, out c);
-                            Console.WriteLine($"{w} {c}");
                             FileInfo file = new FileInfo(savePath);
                             size = file.Length;
                             imgResponse.Size = file.Length.ToString();
@@ -143,7 +136,7 @@ namespace ImageTest.Controllers
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message.ToString());
-                    loggerWriter.WriteLog(ex.Message.ToString());
+                    loggerWriter.WriteLog(ex.Message.ToString(), ex.StackTrace.ToString());
                 }
             }
             Console.WriteLine("Загрузка завершена!");
