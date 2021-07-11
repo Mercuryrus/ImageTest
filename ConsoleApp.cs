@@ -6,10 +6,10 @@ namespace ImageTest
 {
     public class ConsoleApp
     {
-        public ImageRequest EnterSource()
+        public ImageRequestModel EnterSource()
         {
             LoggerWriter loggerWriter = new LoggerWriter();
-            ImageRequest image = new ImageRequest();
+            ImageRequestModel image = new ImageRequestModel();
             try
             {
                 Console.WriteLine("Введите URL:");
@@ -17,13 +17,13 @@ namespace ImageTest
                 Console.WriteLine("Введите кол-во потоков:");
                 image.ThrCount = Convert.ToInt32(Console.ReadLine());
                 if (image.ThrCount < Environment.ProcessorCount)
-                    image.ThrCount += Environment.ProcessorCount-image.ThrCount;
+                    image.ThrCount += Environment.ProcessorCount - image.ThrCount;
 
                 Console.WriteLine("Введите кол-во изображений:");
                 image.ImgCount = Convert.ToInt32(Console.ReadLine());
                 return image;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 loggerWriter.WriteLog(ex.Message.ToString(), ex.StackTrace.ToString());
                 Console.WriteLine("Неверный ввод");
@@ -32,6 +32,6 @@ namespace ImageTest
                 image.ImgCount = 0;
                 return EnterSource();
             }
-        }        
+        }
     }
 }

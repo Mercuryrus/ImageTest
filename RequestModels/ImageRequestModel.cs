@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace ImageTest.RequestModels
 {
-    public class ImageRequest
+    public class ImageRequestModel
     {
         public Uri Url { get; set; }
         public int ThrCount { get; set; }
